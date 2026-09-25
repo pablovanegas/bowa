@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="bowa isotipo">
+  <title>bowa</title>
+  <defs>
+    <!-- Calado: la "b" se recorta del globo y deja ver el fondo -->
+    <mask id="calado">
+      <rect width="200" height="200" fill="#fff"/>
+      <text x="100" y="132" text-anchor="middle" font-family="'Inter','Helvetica Neue',Arial,sans-serif" font-weight="800" font-size="112" fill="#000">b</text>
+    </mask>
+  </defs>
+  <rect width="200" height="200" rx="44" fill="#F2EEE3"/>
+  <path mask="url(#calado)" fill="#25D366"
+        d="M100 26c-41 0-74 31-74 70 0 14 4 27 12 38l-9 35 37-10c10 5 22 8 34 8 41 0 74-31 74-71S141 26 100 26z"/>
+</svg>
