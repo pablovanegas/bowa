@@ -1,0 +1,52 @@
+# Envío de prueba desde GitHub (sus servidores sí tienen salida a graph.facebook.com).
+# Se dispara a mano: Actions → "enviar prueba" → Run workflow. En el celular, desde la app de GitHub.
+#
+# Secretos requeridos (Settings → Secrets and variables → Actions):
+#   WHATSAPP_TOKEN            token de Meta (temporal de 24 h o permanente)
+#   WHATSAPP_PHONE_NUMBER_ID  ID del número que envía
+#   WHATSAPP_TEST_TO          número destino (debe estar registrado como destinatario de prueba en Meta)
+# El destino va como secreto para que no quede visible en los logs de este repo público.
+name: enviar prueba
+on:
+  workflow_dispatch:
+    inputs:
+      plantilla:
+        description: Plantilla aprobada (hello_world viene aprobada en el número de prueba)
+        default: hello_world
+      idioma:
+        description: Código de idioma de la plantilla
+        default: en_US
+      params:
+        description: 'Parámetros separados por coma, ej. "{nombre},{radicado}" (vacío para hello_world)'
+        default: ''
+      nombre:
+        description: Valor de {nombre}
+        default: ''
+permissions:
+  contents: read
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enviar
+        env:
+          WHATSAPP_TOKEN: ${{ secrets.WHATSAPP_TOKEN }}
+          WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+          TEST_TO: ${{ secrets.WHATSAPP_TEST_TO }}
+          PLANTILLA: ${{ inputs.plantilla }}
+          IDIOMA: ${{ inputs.idioma }}
+          PARAMS: ${{ inputs.params }}
+          NOMBRE: ${{ inputs.nombre }}
+        run: |
+          if [ -z "$WHATSAPP_TOKEN" ] || [ -z "$WHATSAPP_PHONE_NUMBER_ID" ] || [ -z "$TEST_TO" ]; then
+            echo "::error::Faltan secretos: WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID y/o WHATSAPP_TEST_TO"; exit 1
+          fi
+          # Oculta el número también en su forma normalizada (57 + 10 dígitos)
+          DIGITS=$(echo "$TEST_TO" | tr -cd '0-9')
+          echo "::add-mask::$DIGITS"
+          echo "::add-mask::57$DIGITS"
+          node src/cli.js enviar "$TEST_TO" --plantilla "$PLANTILLA" --idioma "$IDIOMA" --params "$PARAMS" --nombre "$NOMBRE" --enviar

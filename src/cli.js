@@ -76,6 +76,7 @@ switch (command) {
       const r = summary.results[0];
       console.log(`${r.status === 'enviado' ? '✅' : r.status === 'simulado' ? '🧪' : '❌'} ${r.status} · ${phone} · radicado ${r.radicado}${r.error ? ` · ${r.error}` : ''}`);
       if (!values.enviar) console.log('Simulación. Agrega --enviar para enviar de verdad.');
+      if (r.status === 'fallido') process.exitCode = 1;
     }
     break;
   }
