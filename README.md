@@ -33,6 +33,20 @@ npm run cli -- radicado 3
 npm run cli -- validar BOWA-20260925-7K3QMZ-Z
 ```
 
+### Un solo mensaje
+
+```bash
+# Mensaje con plantilla (inicia conversación): genera su propio radicado
+npm run cli -- enviar 3001234567 --plantilla aviso_radicado --nombre "Ana"
+
+# Respuesta de texto libre (solo dentro de la ventana de 24h tras un mensaje del usuario)
+npm run cli -- enviar 3001234567 --texto "Tu radicado {radicado} fue entregado."
+
+# Agrega --enviar para enviar de verdad; sin él, siempre es una simulación
+```
+
+Instalado como comando global (`npm link`), se usa directamente: `bowa enviar 3001234567 --plantilla aviso_radicado --enviar`.
+
 ### Campaña
 
 Prepara un CSV (`,` o `;`) con al menos `telefono`, `nombre`, `opt_in`. Ver [`contactos.ejemplo.csv`](contactos.ejemplo.csv).
