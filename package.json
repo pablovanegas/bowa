@@ -1,0 +1,18 @@
+{
+  "name": "bowa",
+  "version": "0.1.0",
+  "description": "Bot de envíos masivos por WhatsApp, cifrado y con generador de radicados.",
+  "type": "module",
+  "main": "src/server.js",
+  "bin": { "bowa": "src/cli.js" },
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/server.js",
+    "dev": "node --watch --env-file-if-exists=.env src/server.js",
+    "cli": "node --env-file-if-exists=.env src/cli.js",
+    "test": "node --test \"test/*.test.js\"",
+    "lint": "node --check src/*.js test/*.js"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}

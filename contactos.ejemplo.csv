@@ -1,0 +1,5 @@
+telefono,nombre,opt_in
+3001234567,Ana,si
++57 310 555 0000,Carlos,si
+3001234567,Ana duplicada,si
+3209998888,Sin permiso,no
