@@ -2,14 +2,14 @@
 // Es multiplataforma: no depende de que la shell expanda globs (cmd en Windows no lo hace)
 // y revisa archivo por archivo, porque `node --check a.js b.js` solo revisa el primero.
 import { spawnSync } from 'node:child_process';
-import { readdirSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const DIRS = ['src', 'test', 'scripts'];
 
 export function listJsFiles(dirs = DIRS) {
-  return dirs.flatMap((dir) =>
+  return dirs.filter((dir) => existsSync(dir)).flatMap((dir) =>
     readdirSync(dir, { recursive: true, withFileTypes: true })
       .filter((e) => e.isFile() && e.name.endsWith('.js'))
       .map((e) => join(e.parentPath ?? e.path, e.name)),
