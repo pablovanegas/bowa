@@ -15,6 +15,7 @@ import { runCampaign } from './campaign.js';
 import { loadConfig, requireKeys } from './config.js';
 import { normalizePhone, prepareContacts, parseCsv } from './contacts.js';
 import { generateKey, parseKey } from './crypto.js';
+import { formatCampaignRow, formatSendResult } from './format.js';
 import { generateRadicado, isValidRadicado } from './radicado.js';
 import { EncryptedStore } from './store.js';
 import { WhatsAppClient } from './whatsapp.js';
@@ -74,7 +75,7 @@ switch (command) {
         dryRun: !values.enviar,
       });
       const r = summary.results[0];
-      console.log(`${r.status === 'enviado' ? '✅' : r.status === 'simulado' ? '🧪' : '❌'} ${r.status} · ${phone} · radicado ${r.radicado}${r.error ? ` · ${r.error}` : ''}`);
+      console.log(formatSendResult(r));
       if (!values.enviar) console.log('Simulación. Agrega --enviar para enviar de verdad.');
       if (r.status === 'fallido') process.exitCode = 1;
     }
@@ -101,7 +102,7 @@ switch (command) {
       radicado: { prefix: config.radicadoPrefix, timeZone: config.timezone },
       ratePerSecond: config.ratePerSecond,
       dryRun: !values.enviar,
-      onResult: (r) => console.log(`  ${r.status.padEnd(8)} ${r.phone} ${r.radicado}${r.error ? ` (${r.error})` : ''}`),
+      onResult: (r) => console.log(formatCampaignRow(r)),
     });
     console.log(`\nTotal ${summary.total} · enviados ${summary.enviados} · fallidos ${summary.fallidos} · simulados ${summary.simulados}`);
     if (!values.enviar) console.log('Simulación. Agrega --enviar para enviar de verdad.');
