@@ -41,3 +41,20 @@ test('simulación no llama a la API', async () => {
   const s = await runCampaign({ contacts, template: { name: 'aviso' }, client, dryRun: true });
   assert.equal(s.simulados, 2);
 });
+
+test('guarda durante la campaña, no solo al final', async () => {
+  let guardados = 0;
+  const registrados = [];
+  const store = {
+    data: { campaigns: [] },
+    recordRadicado: (r, info) => registrados.push(info),
+    save: async () => { guardados++; },
+  };
+  const muchos = Array.from({ length: 25 }, (_, i) => ({ phone: `5730000000${String(i).padStart(2, '0')}` }));
+  const client = { sendTemplate: async () => ({ id: 'wamid' }) };
+  const s = await runCampaign({ contacts: muchos, template: { name: 'aviso' }, client, store, sleepFn: noSleep, saveEvery: 10 });
+  assert.equal(guardados, 3); // tras 10, tras 20 y al final
+  assert.ok(s.campaignId);
+  assert.ok(registrados.every((r) => r.campaignId === s.campaignId));
+  assert.equal(store.data.campaigns[0].id, s.campaignId);
+});

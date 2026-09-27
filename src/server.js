@@ -7,12 +7,21 @@ import { isValidRadicado, normalizeRadicado } from './radicado.js';
 import { EncryptedStore } from './store.js';
 import { WhatsAppClient } from './whatsapp.js';
 
-const STOP_WORDS = new Set(['stop', 'baja', 'parar', 'cancelar', 'no mas', 'no más']);
+const STOP_WORDS = new Set(['stop', 'baja', 'parar', 'cancelar', 'no mas', 'darme de baja']);
 const START_WORDS = new Set(['start', 'alta', 'suscribir']);
+const MAX_BODY = 1024 * 1024; // Meta envía lotes pequeños; más de 1 MB no es legítimo.
+const STATUS_ES = { sent: 'enviado', delivered: 'entregado', read: 'leído', failed: 'fallido' };
+
+// "BAJA.", "Baja!!", "no más" → "baja", "no mas": la baja debe funcionar como la escriba la persona.
+export function normalizeCommand(text) {
+  return String(text ?? '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
 
 export function replyFor(text, from, store) {
   const clean = String(text ?? '').trim();
-  const lower = clean.toLowerCase();
+  const lower = normalizeCommand(clean);
 
   if (STOP_WORDS.has(lower)) {
     store.setOptOut(from, true);
@@ -51,37 +60,52 @@ export function createApp({ config, store, client }) {
     if (req.method !== 'POST') return send(405, 'method not allowed');
 
     const chunks = [];
-    for await (const c of req) chunks.push(c);
+    let size = 0;
+    for await (const c of req) {
+      size += c.length;
+      if (size > MAX_BODY) { send(413, 'payload too large'); req.destroy(); return; }
+      chunks.push(c);
+    }
     const raw = Buffer.concat(chunks);
     if (!verifyMetaSignature(raw, req.headers['x-hub-signature-256'], config.whatsapp.appSecret)) return send(401, 'bad signature');
 
     send(200, 'EVENT_RECEIVED'); // Meta exige responder rápido; procesamos después.
 
     try {
-      const payload = JSON.parse(raw.toString('utf8'));
-      for (const entry of payload.entry ?? []) {
-        for (const change of entry.changes ?? []) {
-          const value = change.value ?? {};
-          for (const status of value.statuses ?? []) updateStatus(store, status);
-          for (const msg of value.messages ?? []) {
-            if (msg.type !== 'text') continue;
-            const reply = replyFor(msg.text?.body, msg.from, store);
-            await client.markRead(msg.id).catch(() => {});
-            await client.sendText(msg.from, reply);
-          }
-        }
-      }
-      await store.save();
+      await processWebhook(JSON.parse(raw.toString('utf8')), { store, client });
     } catch (err) {
       console.error('[bowa] error procesando webhook:', err.message);
     }
   });
 }
 
-function updateStatus(store, status) {
-  // sent → delivered → read, o failed
-  for (const info of Object.values(store.data.radicados)) {
-    if (info.messageId === status.id) info.status = { sent: 'enviado', delivered: 'entregado', read: 'leído', failed: 'fallido' }[status.status] ?? status.status;
+// Primero registra y guarda (bajas, estados); después responde. Así una respuesta que
+// falla nunca deja una BAJA sin guardar.
+export async function processWebhook(payload, { store, client }) {
+  await store.refresh(); // radicados que la CLI guardó mientras el servidor corría
+  const replies = [];
+  for (const entry of payload.entry ?? []) {
+    for (const change of entry.changes ?? []) {
+      const value = change.value ?? {};
+      for (const st of value.statuses ?? []) {
+        const at = st.timestamp ? new Date(Number(st.timestamp) * 1000).toISOString() : undefined;
+        store.updateMessageStatus(st.id, STATUS_ES[st.status] ?? st.status, at);
+      }
+      for (const msg of value.messages ?? []) {
+        if (msg.type !== 'text') continue;
+        replies.push({ to: msg.from, id: msg.id, body: replyFor(msg.text?.body, msg.from, store) });
+      }
+    }
+  }
+  await store.save();
+
+  for (const r of replies) {
+    try {
+      await client.markRead(r.id).catch(() => {});
+      await client.sendText(r.to, r.body);
+    } catch (err) {
+      console.error('[bowa] no se pudo responder un mensaje:', err.message);
+    }
   }
 }
 

@@ -1,4 +1,5 @@
 // Envío masivo: un radicado único por destinatario, ritmo controlado y reintentos con backoff.
+import { randomUUID } from 'node:crypto';
 import { generateRadicado } from './radicado.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -17,11 +18,13 @@ export async function runCampaign({
   ratePerSecond = 10,
   maxRetries = 3,
   dryRun = false,
+  saveEvery = 10,        // guarda cada N envíos: si el proceso se cae, no se pierde lo ya enviado
   onResult = () => {},
   sleepFn = sleep,
 }) {
   const interval = 1000 / Math.max(ratePerSecond, 0.1);
   const results = [];
+  const campaignId = randomUUID();
 
   for (const contact of contacts) {
     const started = Date.now();
@@ -46,20 +49,22 @@ export async function runCampaign({
       }
     }
 
-    store?.recordRadicado(rad, { phone: contact.phone, template: template.name, status: result.status, messageId: result.messageId });
+    store?.recordRadicado(rad, { phone: contact.phone, template: template.name, campaignId, status: result.status, messageId: result.messageId });
     results.push(result);
     onResult(result);
+    if (store && results.length % saveEvery === 0) await store.save();
 
     const wait = interval - (Date.now() - started);
     if (wait > 0 && !dryRun) await sleepFn(wait);
   }
 
   if (store) {
-    store.data.campaigns.push({ at: new Date().toISOString(), template: template.name, total: results.length, sent: results.filter((r) => r.status === 'enviado').length });
+    store.data.campaigns.push({ id: campaignId, at: new Date().toISOString(), template: template.name, total: results.length, sent: results.filter((r) => r.status === 'enviado').length });
     await store.save();
   }
 
   return {
+    campaignId,
     total: results.length,
     enviados: results.filter((r) => r.status === 'enviado').length,
     fallidos: results.filter((r) => r.status === 'fallido').length,
