@@ -7,7 +7,8 @@ import { mkdir, open, readFile, rename, rm, stat, writeFile } from 'node:fs/prom
 import { dirname } from 'node:path';
 import { decrypt, encrypt, fingerprint } from './crypto.js';
 
-const EMPTY = () => ({ radicados: {}, optOuts: {}, messages: {}, campaigns: [] });
+// chat: conversación con cada persona (entrantes y salientes), para la bandeja.
+const EMPTY = () => ({ radicados: {}, optOuts: {}, messages: {}, campaigns: [], chat: {} });
 
 // Orden de los estados que llegan por webhook: nunca se retrocede (un "entregado"
 // tardío no pisa un "leído"). "fallido" es final.
@@ -52,6 +53,13 @@ function mergeMaps(a, b, pick) {
 
 const campaignKey = (c) => c.id ?? `${c.at}|${c.template}`;
 
+// Un mensaje de chat no cambia; solo pasa de no leído a leído, nunca al revés.
+function mergeChat(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  return { ...b, read: Boolean(a.read || b.read) };
+}
+
 // Fusiona dos copias del estado (disco y memoria) sin perder cambios de ninguna.
 export function mergeData(a, b) {
   const x = normalize(a);
@@ -63,6 +71,7 @@ export function mergeData(a, b) {
     optOuts: mergeMaps(x.optOuts, y.optOuts, (p, q) => newerOf(p, q, (o) => o.at)),
     messages: mergeMaps(x.messages, y.messages, higherStatus),
     campaigns: [...campaigns.values()],
+    chat: mergeMaps(x.chat, y.chat, mergeChat),
   };
 }
 
@@ -163,6 +172,38 @@ export class EncryptedStore {
     const hits = this.data.campaigns.filter((c) => c.id?.startsWith(q));
     if (hits.length > 1) throw new Error(`El id ${q} coincide con varias campañas; usa más caracteres`);
     return hits[0] ?? null;
+  }
+
+  // Guarda un mensaje de la conversación. dir: 'in' (lo escribió la persona) u 'out' (bowa o Juan).
+  // Los salientes nacen leídos; los entrantes, sin leer.
+  recordChat({ id, phone, dir, body, at = now(), auto = false }) {
+    if (!id) return;
+    const prev = this.data.chat[id];
+    this.data.chat[id] = { phone, dir, body, at, auto, read: prev?.read ?? dir === 'out' };
+  }
+
+  chatWith(phone) {
+    return Object.entries(this.data.chat)
+      .filter(([, m]) => m.phone === phone)
+      .map(([id, m]) => ({ id, ...m }))
+      .sort((a, b) => a.at.localeCompare(b.at));
+  }
+
+  markChatRead(phone) {
+    let n = 0;
+    for (const m of Object.values(this.data.chat)) {
+      if (m.phone === phone && !m.read) { m.read = true; n++; }
+    }
+    return n;
+  }
+
+  // Última vez que la persona escribió: abre la ventana de 24 h para texto libre.
+  lastInboundAt(phone) {
+    let last = null;
+    for (const m of Object.values(this.data.chat)) {
+      if (m.phone === phone && m.dir === 'in' && (!last || m.at > last)) last = m.at;
+    }
+    return last;
   }
 
   setOptOut(phone, optedOut = true) {

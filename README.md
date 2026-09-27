@@ -80,6 +80,18 @@ npm run cli -- reporte 1a2b3c4d      # CSV con radicado, teléfono, estado, wami
 
 Los estados se actualizan solos con el webhook. El reporte contiene teléfonos: no lo subas al repo (`*.csv` ya está en `.gitignore`).
 
+### Bandeja: leer y responder
+
+Todo lo que la gente escribe (y lo que bowa responde) queda guardado **cifrado** en el almacén.
+
+```bash
+npm run cli -- bandeja                         # conversaciones: sin leer primero
+npm run cli -- bandeja 3001234567              # hilo completo; lo marca como leído
+npm run cli -- responder 3001234567 "Ya quedó tu trámite" --enviar
+```
+
+WhatsApp solo deja mandar **texto libre** durante las 24 h siguientes al último mensaje de la persona. Si pasaron más de 24 h, `responder` lo avisa y hay que usar una plantilla (`bowa enviar --plantilla`). A quien escribió `BAJA` no se le envía nada.
+
 ### Webhook
 
 ```bash
