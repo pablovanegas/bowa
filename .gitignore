@@ -5,3 +5,6 @@ data/*
 *.log
 .DS_Store
 coverage/
+# Listas de contactos reales (datos personales): nunca al repo
+*.csv
+!contactos.ejemplo.csv
