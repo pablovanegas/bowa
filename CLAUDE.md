@@ -4,7 +4,7 @@ Bot de envíos masivos e individuales por WhatsApp (Cloud API oficial de Meta), 
 
 - Idioma del producto, los mensajes, la documentación y los commits: **español (Colombia)**. Zona horaria `America/Bogota`, indicativo por defecto `57`.
 - Juan tiene TDAH: responde corto, en pasos numerados, y ajusta el detalle a la tarea.
-- Estado actual, auditoría y roadmap: **`docs/ESTADO.md`**. Léelo antes de proponer trabajo.
+- Estado actual, auditoría y roadmap: **`docs/ESTADO.md`**. Registro de procesos con evidencia: **`docs/BITACORA.md`**. Lee los dos antes de proponer trabajo.
 
 ## Comandos
 - `npm test`: pruebas con `node:test` (sin dependencias).
@@ -41,3 +41,23 @@ deploy/           VM Oracle: install.sh, update.sh, bowa.service, Caddyfile, ORA
   - **En la nube:** tiene GitHub, pero no puede llegar a `graph.facebook.com`.
   - **Local, en el PC de Juan (Windows 11):** tiene Meta, el `.env` y el túnel.
   - Se pasan el contexto con un reporte sin secretos.
+
+## Protocolo anti-alucinación
+1. **Verifica antes de afirmar.** El estado del repo, de los PRs o de las pruebas sale de un comando hecho en esta sesión, no de la memoria de la conversación:
+   - `git fetch && git log --oneline origin/main`;
+   - el estado del PR en GitHub;
+   - `npm test`.
+2. **Di de dónde sale cada dato:**
+   - ✅ **verificado:** comando, commit, PR o CI;
+   - 📣 **reportado:** lo dijo Juan o el agente local (todo lo de Meta, desde la nube);
+   - ❓ **supuesto:** nadie lo ha comprobado.
+
+   Nunca presentes un 📣 o un ❓ como ✅.
+3. **No inventes:**
+   - IDs, URLs, precios, límites o políticas de Meta, versiones ni resultados de pruebas;
+   - si no puedes comprobarlo, dilo y di cómo se comprueba.
+4. **Cita números reales:** el conteo de pruebas y los hashes de commit se copian de la salida del comando, no se estiman.
+5. **Registra cada proceso:** al terminar una tarea, agrega su fila en `docs/BITACORA.md` en el mismo PR, con evidencia y fuente. Si algo falló o se corrigió, anótalo en *Errores y lecciones*.
+6. **Al empezar una sesión:**
+   - lee las últimas filas de la bitácora y **contrástalas** con `origin/main` y los PRs abiertos;
+   - si no coinciden, corrige la bitácora antes de seguir.
