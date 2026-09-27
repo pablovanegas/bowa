@@ -52,7 +52,8 @@ switch (command) {
     const phone = normalizePhone(arg, config.defaultCountryCode);
     if (!phone) throw new Error(`Teléfono inválido: ${arg}`);
     if (!values.plantilla && !values.texto) throw new Error('Falta --plantilla <nombre> (mensaje iniciado por el negocio) o --texto "..." (respuesta dentro de 24h)');
-    if (values.enviar) requireKeys(config, ['whatsapp.token', 'whatsapp.phoneNumberId']);
+    // La llave hace falta para respetar las bajas y guardar el radicado que se envía.
+    if (values.enviar) requireKeys(config, ['encryptionKey', 'whatsapp.token', 'whatsapp.phoneNumberId']);
 
     const store = config.encryptionKey ? await new EncryptedStore(config.storePath, parseKey(config.encryptionKey)).load() : null;
     if (store?.isOptedOut(phone)) throw new Error(`${phone} está dado de baja (BAJA). No se envía.`);
@@ -63,7 +64,9 @@ switch (command) {
       const body = values.texto.replaceAll('{radicado}', rad).replaceAll('{telefono}', phone);
       if (!values.enviar) { console.log(`[simulado] → ${phone}: ${body}`); break; }
       const { id } = await client.sendText(phone, body);
-      console.log(`✅ enviado ${phone} · mensaje ${id}`);
+      store.recordRadicado(rad, { phone, template: null, status: 'enviado', messageId: id });
+      await store.save();
+      console.log(`✅ enviado ${phone} · radicado ${rad} · mensaje ${id}`);
     } else {
       const summary = await runCampaign({
         contacts: [{ phone, nombre: values.nombre }],

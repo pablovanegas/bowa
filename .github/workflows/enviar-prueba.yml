@@ -49,4 +49,7 @@ jobs:
           DIGITS=$(echo "$TEST_TO" | tr -cd '0-9')
           echo "::add-mask::$DIGITS"
           echo "::add-mask::57$DIGITS"
+          # Llave y almacén efímeros: el runner no guarda nada entre ejecuciones.
+          export BOWA_ENCRYPTION_KEY=$(node src/cli.js keygen | cut -d= -f2)
+          export BOWA_STORE_PATH="$RUNNER_TEMP/bowa.store"
           node src/cli.js enviar "$TEST_TO" --plantilla "$PLANTILLA" --idioma "$IDIOMA" --params "$PARAMS" --nombre "$NOMBRE" --enviar

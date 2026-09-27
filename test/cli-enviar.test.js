@@ -29,3 +29,8 @@ test('el binario es ejecutable directamente (#!/usr/bin/env node)', async () => 
   const { stdout } = await run(CLI, ['radicado', '1']);
   assert.match(stdout, /^BOWA-\d{8}-[0-9A-Z]{6}-[0-9A-Z]/);
 });
+
+test('enviar de verdad exige la llave de cifrado (bajas y radicado)', async () => {
+  const env = { ...process.env, BOWA_ENCRYPTION_KEY: '', WHATSAPP_TOKEN: 'x', WHATSAPP_PHONE_NUMBER_ID: '1' };
+  await assert.rejects(run('node', [CLI, 'enviar', '3001234567', '--texto', 'hola', '--enviar'], { env }), /BOWA_ENCRYPTION_KEY|encryptionKey/);
+});
