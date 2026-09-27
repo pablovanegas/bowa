@@ -40,7 +40,7 @@ Registro de lo que **de verdad** se hizo, con su evidencia. Sirve para que cualq
 | 2026-09-27 | Estado, auditoría y roadmap (`docs/ESTADO.md`) | PR #10 → `1e713f3` | ✅ |
 | 2026-09-27 | Fase 3: confirmación, `--reanudar`, `campanas` y `reporte` | PR #11 (`159c893`) | ⏳ abierto · ✅ 58 pruebas en la rama |
 | 2026-09-27 | Fase 4: bandeja cifrada, `bandeja` y `responder` | PR #12 (`1275da7`), apilado sobre el #11 | ⏳ abierto · ✅ 64 pruebas en la rama |
-| 2026-09-27 | Bitácora y protocolo anti-alucinación | este PR | ⏳ abierto |
+| 2026-09-27 | Bitácora y protocolo anti-alucinación | PR #13, apilado sobre el #12 | ⏳ abierto |
 
 ## Errores y lecciones (para no repetirlos)
 | Qué pasó | Lección |
