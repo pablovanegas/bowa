@@ -1,0 +1,5 @@
+# Caddy obtiene y renueva el certificado HTTPS solo (Let's Encrypt).
+# BOWA_DOMAIN se define en /etc/default/caddy (lo escribe install.sh).
+{$BOWA_DOMAIN} {
+	reverse_proxy 127.0.0.1:3000
+}

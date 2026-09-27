@@ -151,6 +151,7 @@ src/
   server.js     webhook: bajas, consulta de radicados, estados
   cli.js        comandos de línea
 brand/          logo, isotipo y manual de marca
+deploy/         servidor 24/7 en Oracle Cloud gratis (ver deploy/ORACLE.md)
 test/           pruebas (node:test)
 ```
 
