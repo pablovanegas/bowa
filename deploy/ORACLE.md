@@ -55,11 +55,22 @@ curl https://bowa-juan.duckdns.org/health     # debe responder {"ok":true,"name"
 ```
 
 ### 8. Apuntar Meta a la URL fija
-Repite el registro por API del README (sección *Registrar el webhook por API*) con:
-- `callback_url=https://bowa-juan.duckdns.org/webhook`
-- `verify_token` = el de la VM → `sudo grep VERIFY /etc/bowa/bowa.env`
+Desde la misma VM. Cambia `APP_ID`, `WABA_ID` y el dominio por los tuyos:
+```bash
+APP_ID=id_de_tu_app   WABA_ID=id_de_tu_waba   DOMINIO=bowa-juan.duckdns.org
+sudo bash -c "set -a; . /etc/bowa/bowa.env; APP_ID=$APP_ID WABA_ID=$WABA_ID DOMINIO=$DOMINIO bash -s" <<'FIN'
+API=https://graph.facebook.com/v21.0
+# 1. Suscribir la app con la URL fija (Meta verifica /webhook en ese momento)
+curl -sS -X POST "$API/$APP_ID/subscriptions" -H "Authorization: Bearer $APP_ID|$WHATSAPP_APP_SECRET" \
+  -d object=whatsapp_business_account -d "callback_url=https://$DOMINIO/webhook" \
+  -d "verify_token=$WHATSAPP_VERIFY_TOKEN" -d fields=messages; echo
+# 2. Conectar la app a la WABA (si ya lo hiciste antes, no pasa nada)
+curl -sS -X POST "$API/$WABA_ID/subscribed_apps" -H "Authorization: Bearer $WHATSAPP_TOKEN"; echo
+FIN
+```
+Las dos llamadas deben responder `{"success":true}`. Los secretos se leen de `/etc/bowa/bowa.env`, así que no quedan en la pantalla ni en el historial.
 
-Solo hay que hacerlo **una vez**: esta URL no cambia. Luego apaga el túnel `cloudflared` de tu PC.
+Se hace **una sola vez**, porque esta URL no cambia. Luego apaga el túnel `cloudflared` de tu PC.
 
 ## Día a día
 

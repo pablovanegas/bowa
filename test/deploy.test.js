@@ -27,3 +27,17 @@ test('el servicio solo puede escribir en la carpeta de datos del almacén', () =
   assert.match(unit, /^ReadWritePaths=\/opt\/bowa\/data$/m);
   assert.match(leer('install.sh'), /BOWA_STORE_PATH=\$APP\/data\/bowa\.store/);
 });
+
+test('Caddy arranca después de abrir el firewall (para que Let\'s Encrypt valide)', () => {
+  const sh = leer('install.sh');
+  const firewall = sh.indexOf('netfilter-persistent save');
+  assert.ok(firewall > 0);
+  assert.ok(!/systemctl (enable --now|start|restart) caddy/.test(sh.slice(0, firewall)), 'Caddy no debe arrancar antes del firewall');
+  assert.match(sh.slice(firewall), /systemctl restart caddy/);
+});
+
+test('update.sh también instala el Caddyfile y recarga Caddy', () => {
+  const sh = leer('update.sh');
+  assert.match(sh, /cp \/opt\/bowa\/deploy\/Caddyfile \/etc\/caddy\/Caddyfile/);
+  assert.match(sh, /systemctl reload caddy/);
+});

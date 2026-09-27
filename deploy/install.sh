@@ -55,8 +55,8 @@ grep -q '^BOWA_DOMAIN=' /etc/default/caddy 2>/dev/null && sed -i "s|^BOWA_DOMAIN
 mkdir -p /etc/systemd/system/caddy.service.d
 printf '[Service]\nEnvironmentFile=/etc/default/caddy\n' > /etc/systemd/system/caddy.service.d/bowa.conf
 systemctl daemon-reload
-systemctl enable --now caddy
-systemctl restart caddy
+# Se habilita sin (re)arrancar: el certificado se pide después de abrir el firewall.
+systemctl enable caddy
 
 echo "7/7 Firewall de la VM (puertos 80 y 443)"
 # Las imágenes Ubuntu de Oracle traen iptables con todo cerrado salvo SSH.
@@ -68,6 +68,9 @@ for p in 80 443; do
   else iptables -A INPUT -m state --state NEW -p tcp --dport "$p" -j ACCEPT; fi
 done
 netfilter-persistent save >/dev/null
+
+# Con 80/443 abiertos, Let's Encrypt ya puede validar el dominio.
+systemctl restart caddy
 
 if [ "${NEEDS_SECRETS:-0}" = 1 ]; then
   systemctl enable bowa
