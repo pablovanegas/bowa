@@ -69,6 +69,67 @@ npm start      # expone /webhook y /health en el puerto PORT
 
 En Meta for Developers → WhatsApp → Configuración, registra `https://tu-dominio/webhook` con tu `WHATSAPP_VERIFY_TOKEN` y suscríbete a `messages`. Cada petición se valida con la firma `X-Hub-Signature-256`.
 
+#### Webhook local con cloudflared (pruebas)
+
+Meta necesita una URL pública con HTTPS. Para probar desde tu PC:
+
+1. Arranca bowa: `npm start` (escucha en `http://localhost:3000`).
+2. En otra terminal abre un túnel rápido:
+   ```bash
+   cloudflared tunnel --url http://localhost:3000
+   ```
+   Imprime una URL tipo `https://palabras-al-azar.trycloudflare.com`.
+3. Registra esa URL en Meta (siguiente sección).
+
+> ⚠️ El túnel rápido **cambia de URL cada vez que lo arrancas**. Cada reinicio obliga a repetir el paso 1 de la sección siguiente con la URL nueva. Mientras el PC esté apagado, bowa no recibe mensajes.
+
+#### Registrar el webhook por API
+
+Necesitas: `APP_ID` (ID de la app en Meta), `WHATSAPP_APP_SECRET`, `WABA_ID` (WhatsApp Business Account), `WHATSAPP_TOKEN` (token del usuario del sistema) y `WHATSAPP_VERIFY_TOKEN`. Ponlos como variables de entorno y **no los pegues en archivos que se suban al repo**.
+
+Los tokens van siempre en la cabecera `Authorization`, **nunca en la URL**: las URLs quedan en historiales y en logs de proxies.
+
+1. **Suscribir la app al objeto `whatsapp_business_account`.** Usa el token de app, que es `APP_ID|APP_SECRET`. Al recibir esta llamada, Meta hace un `GET` a tu `/webhook` para verificarlo, así que bowa y el túnel deben estar arriba.
+   ```bash
+   curl -X POST "https://graph.facebook.com/v21.0/$APP_ID/subscriptions" \
+     -H "Authorization: Bearer $APP_ID|$WHATSAPP_APP_SECRET" \
+     -d "object=whatsapp_business_account" \
+     -d "callback_url=https://TU-URL.trycloudflare.com/webhook" \
+     -d "verify_token=$WHATSAPP_VERIFY_TOKEN" \
+     -d "fields=messages"
+   ```
+2. **Conectar la app a tu WABA.** Basta una vez, no hay que repetirlo al cambiar la URL:
+   ```bash
+   curl -X POST "https://graph.facebook.com/v21.0/$WABA_ID/subscribed_apps" \
+     -H "Authorization: Bearer $WHATSAPP_TOKEN"
+   ```
+3. **Comprobar:**
+   ```bash
+   curl "https://graph.facebook.com/v21.0/$APP_ID/subscriptions" -H "Authorization: Bearer $APP_ID|$WHATSAPP_APP_SECRET"
+   curl "https://graph.facebook.com/v21.0/$WABA_ID/subscribed_apps" -H "Authorization: Bearer $WHATSAPP_TOKEN"
+   ```
+   Si `subscribed_apps` muestra otras apps además de bowa, esas apps también reciben los mensajes.
+
+**En Windows (PowerShell)**, los mismos pasos con `Invoke-RestMethod`. Primero define las variables en la sesión: `$env:APP_ID = "..."` y así con las demás.
+```powershell
+$api = "https://graph.facebook.com/v21.0"
+$app = @{ Authorization = "Bearer $($env:APP_ID)|$($env:WHATSAPP_APP_SECRET)" }
+$sys = @{ Authorization = "Bearer $env:WHATSAPP_TOKEN" }
+
+# 1. Suscribir la app (repetir cada vez que cambie la URL del túnel)
+Invoke-RestMethod -Method Post -Uri "$api/$env:APP_ID/subscriptions" -Headers $app -Body @{
+  object = "whatsapp_business_account"
+  callback_url = "https://TU-URL.trycloudflare.com/webhook"
+  verify_token = $env:WHATSAPP_VERIFY_TOKEN
+  fields = "messages"
+}
+# 2. Conectar la app a la WABA (una vez)
+Invoke-RestMethod -Method Post -Uri "$api/$env:WABA_ID/subscribed_apps" -Headers $sys
+# 3. Comprobar
+Invoke-RestMethod -Uri "$api/$env:APP_ID/subscriptions" -Headers $app | ConvertTo-Json -Depth 5
+Invoke-RestMethod -Uri "$api/$env:WABA_ID/subscribed_apps" -Headers $sys | ConvertTo-Json -Depth 5
+```
+
 ## Configurar WhatsApp Cloud API
 
 1. Crea una app tipo *Business* en [developers.facebook.com](https://developers.facebook.com/) y agrega el producto **WhatsApp**.
