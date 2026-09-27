@@ -10,6 +10,8 @@
 //                                  (--si la da por adelantado); --reanudar <id> salta a quien ya recibió
 //   campanas                       lista las campañas con sus estados de entrega
 //   reporte <id> [--salida archivo.csv]  exporta el detalle de una campaña
+//   bandeja [telefono]             conversaciones (sin leer primero); con teléfono, el hilo completo
+//   responder <telefono> "texto" [--enviar]  responde en la ventana de 24 h
 //
 // Instalación como comando global: `npm link` (usa el bin "bowa" de package.json).
 import { randomUUID } from 'node:crypto';
@@ -22,6 +24,7 @@ import { normalizePhone, prepareContacts, parseCsv } from './contacts.js';
 import { generateKey, parseKey } from './crypto.js';
 import { formatCampaignRow, formatSendResult } from './format.js';
 import { generateRadicado, isValidRadicado } from './radicado.js';
+import { conversations, formatWhen, preview, withinServiceWindow } from './inbox.js';
 import { campaignReport, countByStatus, formatCounts, toCsv } from './report.js';
 import { EncryptedStore } from './store.js';
 import { WhatsAppClient } from './whatsapp.js';
@@ -41,7 +44,7 @@ const { positionals, values } = parseArgs({
     salida: { type: 'string' },
   },
 });
-const [command, arg] = positionals;
+const [command, arg, arg2] = positionals;
 
 // Envío real a muchos: confirmación escrita, o --si para scripts. Sin terminal y sin --si, no envía.
 async function confirmar(si) {
@@ -181,6 +184,55 @@ switch (command) {
     break;
   }
 
+  case 'bandeja': {
+    requireKeys(config, ['encryptionKey']);
+    const store = await new EncryptedStore(config.storePath, parseKey(config.encryptionKey)).load();
+    if (!arg) {
+      const lista = conversations(store.data.chat);
+      if (!lista.length) { console.log('La bandeja está vacía.'); break; }
+      for (const c of lista) {
+        const marca = c.unread ? `🟢 ${c.unread} sin leer` : '   al día';
+        const quien = c.last.dir === 'in' ? '' : 'tú: ';
+        console.log(`${c.phone}  ${marca.padEnd(14)}  ${formatWhen(c.last.at, config.timezone)}  ${quien}${preview(c.last.body)}`);
+      }
+      console.log('\nVer una conversación: bowa bandeja <telefono>');
+      break;
+    }
+    const phone = normalizePhone(arg, config.defaultCountryCode);
+    if (!phone) throw new Error(`Teléfono inválido: ${arg}`);
+    const hilo = store.chatWith(phone);
+    if (!hilo.length) { console.log(`No hay mensajes con ${phone}.`); break; }
+    for (const m of hilo) {
+      const lado = m.dir === 'in' ? '←' : m.auto ? '→ bot' : '→ tú';
+      console.log(`${formatWhen(m.at, config.timezone)}  ${lado.padEnd(5)}  ${m.body}`);
+    }
+    const ventana = withinServiceWindow(store.lastInboundAt(phone));
+    console.log(ventana ? `\nPuedes responder con: bowa responder ${phone} "texto" --enviar` : '\nPasaron más de 24 h: para escribirle usa una plantilla (bowa enviar --plantilla).');
+    if (store.markChatRead(phone)) await store.save();
+    break;
+  }
+
+  case 'responder': {
+    const texto = arg2 ?? values.texto;
+    if (!arg || !texto) throw new Error('Uso: responder <telefono> "texto" [--enviar]');
+    requireKeys(config, ['encryptionKey', ...(values.enviar ? ['whatsapp.token', 'whatsapp.phoneNumberId'] : [])]);
+    const phone = normalizePhone(arg, config.defaultCountryCode);
+    if (!phone) throw new Error(`Teléfono inválido: ${arg}`);
+    const store = await new EncryptedStore(config.storePath, parseKey(config.encryptionKey)).load();
+    if (store.isOptedOut(phone)) throw new Error(`${phone} está dado de baja (BAJA). No se envía.`);
+    // WhatsApp solo permite texto libre si la persona escribió en las últimas 24 h.
+    if (!withinServiceWindow(store.lastInboundAt(phone))) {
+      throw new Error(`${phone} no te ha escrito en las últimas 24 h: usa una plantilla (bowa enviar ${phone} --plantilla <nombre>).`);
+    }
+    if (!values.enviar) { console.log(`[simulado] → ${phone}: ${texto}\nAgrega --enviar para enviarlo de verdad.`); break; }
+    const { id } = await new WhatsAppClient(config.whatsapp).sendText(phone, texto);
+    store.recordChat({ id, phone, dir: 'out', body: texto });
+    store.markChatRead(phone);
+    await store.save();
+    console.log(`✅ enviado ${phone} · mensaje ${id}`);
+    break;
+  }
+
   default:
     console.log([
       'bowa · bot de envío de mensajes por WhatsApp',
@@ -194,5 +246,7 @@ switch (command) {
       '  campana <csv> --plantilla <n> [--params "{nombre},{radicado}"] [--enviar [--si]] [--reanudar <id>]',
       '  campanas                                  campañas enviadas y sus estados',
       '  reporte <id> [--salida archivo.csv]       detalle de una campaña en CSV',
+      '  bandeja [telefono]                        mensajes recibidos; con teléfono, la conversación',
+      '  responder <telefono> "texto" [--enviar]   contestar dentro de las 24 h',
     ].join('\n'));
 }

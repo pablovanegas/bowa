@@ -50,7 +50,7 @@ Revisé todo el código con los PRs abiertos combinados. Los hallazgos graves ya
 |---|---|---|
 | ✅ | Repetir una campaña con el mismo CSV **volvía a enviar a todos**. | Resuelto: `campana --reanudar <id>`. |
 | ✅ | `campana --enviar` arrancaba sin confirmación. | Resuelto: pide escribir `SI` o recibir `--si`. |
-| 🟠 | Los mensajes que escribe la gente **no se guardan**: Juan no puede leerlos. | Bandeja cifrada con `bowa bandeja` y `bowa responder` (fase 4). |
+| ✅ | Los mensajes que escribe la gente **no se guardaban**. | Resuelto: bandeja cifrada con `bowa bandeja` y `bowa responder`. |
 | 🟠 | Otra app de Meta ("EnElColegioMensaje") también está suscrita a la cuenta de WhatsApp y **recibe los mismos mensajes**. | Desuscribirla. Necesita un token de esa app (pendiente de Juan). |
 | 🟡 | El almacén es un solo archivo que se reescribe completo en cada evento. | Sirve para miles de mensajes; para más, `node:sqlite`, que viene con Node (fase 5). |
 | 🟡 | La huella de los teléfonos (HMAC) usa la misma llave que el cifrado. | Derivar dos sub-llaves con HKDF, con migración (fase 5). |
@@ -94,9 +94,11 @@ Hoy solo se puede enviar a 5 números de prueba. Para enviar a cualquier número
 4. ⏳ **Consentimiento con evidencia:** las columnas `fecha_autorizacion` y `fuente` en el CSV.
 
 ### Fase 4 · Mensajes individuales y bandeja (código, bowa)
-1. Guardar **cifrados** los mensajes que llegan.
-2. `bowa bandeja`: ver quién escribió y qué dijo.
-3. `bowa responder <tel> "texto"`: avisa si ya pasaron las 24 h, porque entonces hace falta una plantilla.
+1. ✅ Guardar **cifrados** los mensajes que llegan (texto y multimedia como `[image]`, `[audio]`, …) y las respuestas.
+2. ✅ `bowa bandeja`: quién escribió y qué dijo, sin leer primero. `bowa bandeja <tel>` muestra el hilo y lo marca como leído.
+3. ✅ `bowa responder <tel> "texto"`: solo dentro de las 24 h y nunca a quien se dio de baja.
+4. ⏳ Opcional: apagar la respuesta automática ("Hola, soy bowa…") cuando Juan atiende en persona.
+5. ⏳ Opcional: borrar conversaciones viejas (retención), porque la bandeja crece sin límite.
 
 ### Fase 5 · Escala y endurecimiento
 Pasar el almacén a `node:sqlite`, sub-llaves con HKDF, CI en Windows, separador CSV automático y `verify_token` en tiempo constante.
