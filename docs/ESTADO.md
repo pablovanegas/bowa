@@ -48,8 +48,8 @@ Revisé todo el código con los PRs abiertos combinados. Los hallazgos graves ya
 ### Pendientes (no urgentes o requieren decisión)
 | Severidad | Hallazgo | Propuesta |
 |---|---|---|
-| 🟠 | Repetir una campaña con el mismo CSV **vuelve a enviar a todos**. | `campana --reanudar <id>`, que salta a quien ya recibió (fase 3). |
-| 🟠 | `campana --enviar` arranca sin confirmación. | Mostrar el total y pedir `--si` o una confirmación escrita (fase 3). |
+| ✅ | Repetir una campaña con el mismo CSV **volvía a enviar a todos**. | Resuelto: `campana --reanudar <id>`. |
+| ✅ | `campana --enviar` arrancaba sin confirmación. | Resuelto: pide escribir `SI` o recibir `--si`. |
 | 🟠 | Los mensajes que escribe la gente **no se guardan**: Juan no puede leerlos. | Bandeja cifrada con `bowa bandeja` y `bowa responder` (fase 4). |
 | 🟠 | Otra app de Meta ("EnElColegioMensaje") también está suscrita a la cuenta de WhatsApp y **recibe los mismos mensajes**. | Desuscribirla. Necesita un token de esa app (pendiente de Juan). |
 | 🟡 | El almacén es un solo archivo que se reescribe completo en cada evento. | Sirve para miles de mensajes; para más, `node:sqlite`, que viene con Node (fase 5). |
@@ -88,10 +88,10 @@ Hoy solo se puede enviar a 5 números de prueba. Para enviar a cualquier número
    - Los límites exactos se ven en **WhatsApp Manager → Números de teléfono**.
 
 ### Fase 3 · Envío masivo seguro (código, bowa)
-1. **Confirmación antes de enviar:** "Vas a enviar a 1.240 contactos con la plantilla X. Escribe SI".
-2. **Reanudar campañas:** con `--reanudar <id>` no se reenvía a quien ya recibió.
-3. **Reporte por campaña:** un CSV con radicado, wamid y estado (enviado, entregado, leído o fallido), más el comando `bowa campanas` para listarlas.
-4. **Consentimiento con evidencia:** las columnas `fecha_autorizacion` y `fuente` en el CSV.
+1. ✅ **Confirmación antes de enviar:** muestra el total y pide escribir `SI`. En scripts se usa `--si`.
+2. ✅ **Reanudar campañas:** `--reanudar <id>` no reenvía a quien ya recibió y reintenta los fallidos.
+3. ✅ **Reporte por campaña:** `bowa campanas` (conteo por estado) y `bowa reporte <id>` (CSV con radicado, wamid y estado).
+4. ⏳ **Consentimiento con evidencia:** las columnas `fecha_autorizacion` y `fuente` en el CSV.
 
 ### Fase 4 · Mensajes individuales y bandeja (código, bowa)
 1. Guardar **cifrados** los mensajes que llegan.
