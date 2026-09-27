@@ -5,11 +5,16 @@
 //   validar <radicado>             valida el dígito de control
 //   enviar <telefono> --plantilla <nombre> [--idioma es] [--params "{nombre},{radicado}"] [--enviar]
 //                                  un solo mensaje, con su propio radicado; --texto para responder en la ventana de 24h
-//   campana <archivo.csv> --plantilla <nombre> [--idioma es] [--params "{nombre},{radicado}"] [--enviar]
-//                                  por defecto es simulación; --enviar hace el envío real
+//   campana <archivo.csv> --plantilla <nombre> [--idioma es] [--params "{nombre},{radicado}"] [--enviar [--si]]
+//                                  por defecto es simulación; --enviar hace el envío real y pide confirmación
+//                                  (--si la da por adelantado); --reanudar <id> salta a quien ya recibió
+//   campanas                       lista las campañas con sus estados de entrega
+//   reporte <id> [--salida archivo.csv]  exporta el detalle de una campaña
 //
 // Instalación como comando global: `npm link` (usa el bin "bowa" de package.json).
-import { readFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { readFile, writeFile } from 'node:fs/promises';
+import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
 import { runCampaign } from './campaign.js';
 import { loadConfig, requireKeys } from './config.js';
@@ -17,6 +22,7 @@ import { normalizePhone, prepareContacts, parseCsv } from './contacts.js';
 import { generateKey, parseKey } from './crypto.js';
 import { formatCampaignRow, formatSendResult } from './format.js';
 import { generateRadicado, isValidRadicado } from './radicado.js';
+import { campaignReport, countByStatus, formatCounts, toCsv } from './report.js';
 import { EncryptedStore } from './store.js';
 import { WhatsAppClient } from './whatsapp.js';
 
@@ -30,9 +36,22 @@ const { positionals, values } = parseArgs({
     nombre: { type: 'string', default: '' },
     texto: { type: 'string' },
     enviar: { type: 'boolean', default: false },
+    si: { type: 'boolean', default: false },
+    reanudar: { type: 'string' },
+    salida: { type: 'string' },
   },
 });
 const [command, arg] = positionals;
+
+// Envío real a muchos: confirmación escrita, o --si para scripts. Sin terminal y sin --si, no envía.
+async function confirmar(si) {
+  if (si) return true;
+  if (!process.stdin.isTTY) throw new Error('Falta confirmación: agrega --si para enviar sin terminal interactiva');
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const respuesta = await rl.question('Escribe SI para enviar: ');
+  rl.close();
+  return respuesta.trim().toUpperCase() === 'SI';
+}
 
 switch (command) {
   case 'keygen':
@@ -88,17 +107,39 @@ switch (command) {
   case 'campana': {
     if (!arg || !values.plantilla) throw new Error('Uso: campana <archivo.csv> --plantilla <nombre> [--enviar]');
     if (values.enviar) requireKeys(config, ['encryptionKey', 'whatsapp.token', 'whatsapp.phoneNumberId']);
+    if (values.reanudar) requireKeys(config, ['encryptionKey']);
     // En simulación la llave es opcional: sin ella no se consultan las bajas registradas.
     const store = config.encryptionKey ? await new EncryptedStore(config.storePath, parseKey(config.encryptionKey)).load() : null;
-    const { ready, skipped } = prepareContacts(parseCsv(await readFile(arg, 'utf8')), {
+    const { ready: listos, skipped } = prepareContacts(parseCsv(await readFile(arg, 'utf8')), {
       defaultCountryCode: config.defaultCountryCode,
       isOptedOut: (p) => store?.isOptedOut(p) ?? false,
     });
+
+    // Reanudar: misma campaña, sin reenviar a quien ya recibió (los fallidos se reintentan).
+    let campaignId;
+    let ready = listos;
+    if (values.reanudar) {
+      const previa = store.findCampaign(values.reanudar);
+      if (!previa) throw new Error(`No existe la campaña ${values.reanudar}. Mira las disponibles con: bowa campanas`);
+      campaignId = previa.id;
+      const recibieron = new Set(store.campaignRadicados(campaignId).filter((r) => r.status !== 'fallido').map((r) => r.phone));
+      ready = listos.filter((c) => !recibieron.has(c.phone));
+      console.log(`Reanudando campaña ${campaignId.slice(0, 8)}: ${listos.length - ready.length} ya recibieron y se omiten.`);
+    }
+
     console.log(`Contactos listos: ${ready.length} · descartados: ${skipped.length}`);
     for (const s of skipped) console.log(`  – ${s.record.telefono ?? '?'}: ${s.reason}`);
+    if (!ready.length) { console.log('No hay a quién enviar.'); break; }
+
+    if (values.enviar) {
+      campaignId ??= randomUUID();
+      console.log(`\nCampaña ${campaignId.slice(0, 8)} · plantilla ${values.plantilla} (${values.idioma}) · ${ready.length} mensajes reales.`);
+      if (!(await confirmar(values.si))) { console.log('Cancelado. No se envió nada.'); process.exitCode = 1; break; }
+    }
 
     const summary = await runCampaign({
       contacts: ready,
+      campaignId,
       template: { name: values.plantilla, language: values.idioma, bodyParams: values.params.split(',').filter(Boolean) },
       client: new WhatsAppClient(config.whatsapp),
       store: values.enviar ? store : undefined,
@@ -109,6 +150,34 @@ switch (command) {
     });
     console.log(`\nTotal ${summary.total} · enviados ${summary.enviados} · fallidos ${summary.fallidos} · simulados ${summary.simulados}`);
     if (!values.enviar) console.log('Simulación. Agrega --enviar para enviar de verdad.');
+    else console.log(`Estados en vivo: bowa campanas · detalle: bowa reporte ${summary.campaignId.slice(0, 8)}`);
+    break;
+  }
+
+  case 'campanas': {
+    requireKeys(config, ['encryptionKey']);
+    const store = await new EncryptedStore(config.storePath, parseKey(config.encryptionKey)).load();
+    const lista = [...store.data.campaigns].filter((c) => c.id).sort((a, b) => (b.at ?? '').localeCompare(a.at ?? ''));
+    if (!lista.length) { console.log('Todavía no hay campañas enviadas.'); break; }
+    for (const c of lista) {
+      const conteo = countByStatus(campaignReport(store, c.id));
+      console.log(`${c.id.slice(0, 8)}  ${(c.at ?? '').slice(0, 16).replace('T', ' ')}  ${c.template}  total ${c.total}  ·  ${formatCounts(conteo)}`);
+    }
+    break;
+  }
+
+  case 'reporte': {
+    if (!arg) throw new Error('Uso: reporte <id de campaña> [--salida archivo.csv]');
+    requireKeys(config, ['encryptionKey']);
+    const store = await new EncryptedStore(config.storePath, parseKey(config.encryptionKey)).load();
+    const campana = store.findCampaign(arg);
+    if (!campana) throw new Error(`No existe la campaña ${arg}. Mira las disponibles con: bowa campanas`);
+    const filas = campaignReport(store, campana.id);
+    const salida = values.salida ?? `reporte-${campana.id.slice(0, 8)}.csv`;
+    await writeFile(salida, toCsv(filas), { mode: 0o600 });
+    console.log(`${filas.length} filas → ${salida}`);
+    console.log(formatCounts(countByStatus(filas)));
+    console.log('⚠️ El archivo tiene teléfonos: no lo subas al repo ni lo compartas.');
     break;
   }
 
@@ -122,6 +191,8 @@ switch (command) {
       '  validar <radicado>                        valida el dígito de control',
       '  enviar <telefono> --plantilla <n> [--nombre "Ana"] [--enviar]',
       '  enviar <telefono> --texto "..." [--enviar]',
-      '  campana <csv> --plantilla <n> [--params "{nombre},{radicado}"] [--enviar]',
+      '  campana <csv> --plantilla <n> [--params "{nombre},{radicado}"] [--enviar [--si]] [--reanudar <id>]',
+      '  campanas                                  campañas enviadas y sus estados',
+      '  reporte <id> [--salida archivo.csv]       detalle de una campaña en CSV',
     ].join('\n'));
 }
