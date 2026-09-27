@@ -91,6 +91,7 @@ src/
   cli.js        comandos de línea
 brand/          logo, isotipo y manual de marca
 test/           pruebas (node:test)
+docs/ESTADO.md  estado del proyecto, auditoría y próximos pasos
 ```
 
 ## Uso responsable
