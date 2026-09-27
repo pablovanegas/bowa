@@ -90,5 +90,5 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   requireKeys(config, ['whatsapp.token', 'whatsapp.phoneNumberId', 'whatsapp.verifyToken', 'whatsapp.appSecret', 'encryptionKey']);
   const store = await new EncryptedStore(config.storePath, parseKey(config.encryptionKey)).load();
   const client = new WhatsAppClient(config.whatsapp);
-  createApp({ config, store, client }).listen(config.port, () => console.log(`[bowa] webhook escuchando en :${config.port}/webhook`));
+  createApp({ config, store, client }).listen(config.port, config.host, () => console.log(`[bowa] webhook escuchando en ${config.host ?? '*'}:${config.port}/webhook`));
 }

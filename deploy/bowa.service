@@ -1,0 +1,27 @@
+# Servicio systemd de bowa: arranca con la máquina y se reinicia si se cae.
+# Instalado por deploy/install.sh en /etc/systemd/system/bowa.service
+[Unit]
+Description=bowa - webhook de WhatsApp
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bowa
+Group=bowa
+WorkingDirectory=/opt/bowa
+# Secretos fuera del repo, legibles solo por root y el usuario bowa
+EnvironmentFile=/etc/bowa/bowa.env
+ExecStart=/usr/bin/node src/server.js
+Restart=always
+RestartSec=5
+
+# Endurecimiento: solo puede escribir en su carpeta de datos (almacén cifrado)
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/bowa/data
+
+[Install]
+WantedBy=multi-user.target

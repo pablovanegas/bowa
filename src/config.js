@@ -15,6 +15,8 @@ export function loadConfig(env = process.env) {
     timezone: env.BOWA_TIMEZONE || 'America/Bogota',
     storePath: env.BOWA_STORE_PATH || 'data/bowa.store',
     port: Number(env.PORT || 3000),
+    // En un servidor, 127.0.0.1 deja el puerto solo detrás del proxy HTTPS (Caddy).
+    host: env.BOWA_HOST || undefined,
   };
 }
 
