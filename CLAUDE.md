@@ -4,7 +4,7 @@ Bot de envíos masivos e individuales por WhatsApp (Cloud API oficial de Meta), 
 
 - Idioma del producto, los mensajes, la documentación y los commits: **español (Colombia)**. Zona horaria `America/Bogota`, indicativo por defecto `57`.
 - Juan tiene TDAH: responde corto, en pasos numerados, y ajusta el detalle a la tarea.
-- Estado actual, auditoría y roadmap: **`docs/ESTADO.md`**. Léelo antes de proponer trabajo.
+- Estado actual, auditoría y roadmap: **`docs/ESTADO.md`**. Registro de procesos con evidencia: **`docs/BITACORA.md`**. Lee los dos antes de proponer trabajo.
 
 ## Comandos
 - `npm test`: pruebas con `node:test` (sin dependencias).
@@ -37,7 +37,32 @@ deploy/           VM Oracle: install.sh, update.sh, bowa.service, Caddyfile, ORA
 ## Flujo de trabajo
 - Una rama y un PR por tarea, hacia `main`. Toda función nueva lleva prueba en `test/`, y `npm test` y `npm run lint` deben estar en verde.
 - Copilot revisa cada PR: se atienden sus hallazgos, se responde en el hilo y se resuelve.
+- **PRs apilados** (uno construido sobre otro): se fusionan en orden. Después de cada merge:
+  1. cambiar la base del siguiente PR a `main`;
+  2. hacer merge de `main` en su rama: si `git diff <rama inferior> origin/main` sale vacío, los conflictos se resuelven con la versión de la rama superior;
+  3. correr `npm test` y esperar el CI en verde antes de fusionar.
+- **Después de fusionar:** actualizar `docs/BITACORA.md` (con el hash del merge) y `docs/ESTADO.md`. Si no puede ir en el mismo PR, va en el siguiente.
 - Hay dos agentes:
   - **En la nube:** tiene GitHub, pero no puede llegar a `graph.facebook.com`.
   - **Local, en el PC de Juan (Windows 11):** tiene Meta, el `.env` y el túnel.
   - Se pasan el contexto con un reporte sin secretos.
+
+## Protocolo anti-alucinación
+1. **Verifica antes de afirmar.** El estado del repo, de los PRs o de las pruebas sale de un comando hecho en esta sesión, no de la memoria de la conversación:
+   - `git fetch && git log --oneline origin/main`;
+   - el estado del PR en GitHub;
+   - `npm test`.
+2. **Di de dónde sale cada dato:**
+   - ✅ **verificado:** comando, commit, PR o CI;
+   - 📣 **reportado:** lo dijo Juan o el agente local (todo lo de Meta, desde la nube);
+   - ❓ **supuesto:** nadie lo ha comprobado.
+
+   Nunca presentes un 📣 o un ❓ como ✅.
+3. **No inventes:**
+   - IDs, URLs, precios, límites o políticas de Meta, versiones ni resultados de pruebas;
+   - si no puedes comprobarlo, dilo y di cómo se comprueba.
+4. **Cita números reales:** el conteo de pruebas y los hashes de commit se copian de la salida del comando, no se estiman.
+5. **Registra cada proceso:** al terminar una tarea, agrega su fila en `docs/BITACORA.md` en el mismo PR, con evidencia y fuente. Si algo falló o se corrigió, anótalo en *Errores y lecciones*.
+6. **Al empezar una sesión:**
+   - lee las últimas filas de la bitácora y **contrástalas** con `origin/main` y los PRs abiertos;
+   - si no coinciden, corrige la bitácora antes de seguir.

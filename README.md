@@ -185,6 +185,7 @@ brand/          logo, isotipo y manual de marca
 deploy/         servidor 24/7 en Oracle Cloud gratis (ver deploy/ORACLE.md)
 test/           pruebas (node:test)
 docs/ESTADO.md  estado del proyecto, auditoría y próximos pasos
+docs/BITACORA.md registro de procesos con evidencia (✅ verificado / 📣 reportado)
 ```
 
 ## Uso responsable
