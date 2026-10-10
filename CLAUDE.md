@@ -9,7 +9,7 @@ Bot de envíos masivos e individuales por WhatsApp (Cloud API oficial de Meta), 
 ## Comandos
 - `npm test`: pruebas con `node:test` (sin dependencias).
 - `npm run lint`: `node --check` archivo por archivo (`scripts/lint.js`); funciona en Windows.
-- `npm run cli -- <keygen|radicado|validar|enviar|campana>`: ver `src/cli.js`. Sin `--enviar`, todo es simulación.
+- `npm run cli -- <keygen|radicado|validar|enviar|campana|campanas|reporte>`: ver `src/cli.js`. Sin `--enviar`, todo es simulación.
 - `npm start`: servidor del webhook (`/webhook`, `/health`).
 
 ## Mapa
@@ -17,6 +17,7 @@ Bot de envíos masivos e individuales por WhatsApp (Cloud API oficial de Meta), 
 src/cli.js        CLI (bin "bowa")            src/server.js   webhook: bajas, radicados, estados
 src/campaign.js   envío masivo con ritmo       src/store.js    almacén cifrado compartido (candado + fusión)
 src/whatsapp.js   cliente Graph API            src/format.js   líneas de salida (incluye wamid)
+src/report.js     reporte de campañas y CSV
 src/contacts.js   CSV, E.164, consentimiento   src/radicado.js radicados con dígito de control
 src/crypto.js     AES-GCM, HMAC, firma Meta    src/config.js   variables de entorno
 deploy/           VM Oracle: install.sh, update.sh, bowa.service, Caddyfile, ORACLE.md

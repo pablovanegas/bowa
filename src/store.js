@@ -149,6 +149,22 @@ export class EncryptedStore {
     this.data.messages[messageId] = higherStatus(this.data.messages[messageId], { status, at });
   }
 
+  // Radicados de una campaña con su estado vigente.
+  campaignRadicados(campaignId) {
+    return Object.keys(this.data.radicados)
+      .map((radicado) => ({ radicado, ...this.getRadicado(radicado) }))
+      .filter((r) => r.campaignId === campaignId);
+  }
+
+  // Acepta el id completo o sus primeros caracteres (mínimo 6), como lo muestra la CLI.
+  findCampaign(idOrPrefix) {
+    const q = String(idOrPrefix ?? '').trim().toLowerCase();
+    if (q.length < 6) throw new Error('Usa al menos 6 caracteres del id de la campaña');
+    const hits = this.data.campaigns.filter((c) => c.id?.startsWith(q));
+    if (hits.length > 1) throw new Error(`El id ${q} coincide con varias campañas; usa más caracteres`);
+    return hits[0] ?? null;
+  }
+
   setOptOut(phone, optedOut = true) {
     this.data.optOuts[fingerprint(phone, this.key)] = { out: optedOut, at: now() };
   }

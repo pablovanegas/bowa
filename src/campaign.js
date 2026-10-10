@@ -19,12 +19,12 @@ export async function runCampaign({
   maxRetries = 3,
   dryRun = false,
   saveEvery = 10,        // guarda cada N envíos: si el proceso se cae, no se pierde lo ya enviado
+  campaignId = randomUUID(), // pasar el de una campaña existente para reanudarla
   onResult = () => {},
   sleepFn = sleep,
 }) {
   const interval = 1000 / Math.max(ratePerSecond, 0.1);
   const results = [];
-  const campaignId = randomUUID();
 
   for (const contact of contacts) {
     const started = Date.now();
@@ -59,7 +59,18 @@ export async function runCampaign({
   }
 
   if (store) {
-    store.data.campaigns.push({ id: campaignId, at: new Date().toISOString(), template: template.name, total: results.length, sent: results.filter((r) => r.status === 'enviado').length });
+    // Una sola entrada por campaña: al reanudar se suman los totales.
+    const now = new Date().toISOString();
+    const prev = store.data.campaigns.find((c) => c.id === campaignId);
+    const entry = {
+      id: campaignId,
+      at: prev?.at ?? now,
+      updatedAt: now,
+      template: template.name,
+      total: (prev?.total ?? 0) + results.length,
+      sent: (prev?.sent ?? 0) + results.filter((r) => r.status === 'enviado').length,
+    };
+    store.data.campaigns = [...store.data.campaigns.filter((c) => c.id !== campaignId), entry];
     await store.save();
   }
 

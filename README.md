@@ -61,6 +61,25 @@ npm run cli -- campana contactos.csv --plantilla aviso_radicado --params "{nombr
 
 Los `--params` llenan las variables `{{1}}`, `{{2}}`… de la plantilla. Puedes usar `{radicado}`, `{telefono}` o cualquier columna del CSV.
 
+Con `--enviar`, bowa muestra cuántos mensajes va a mandar y pide escribir **SI**. En scripts o en GitHub Actions, agrega `--si`.
+
+Si una campaña se corta (se cerró el PC, se agotó el saldo, etc.), retómala sin reenviar a nadie:
+
+```bash
+npm run cli -- campana contactos.csv --plantilla aviso_radicado --reanudar 1a2b3c4d --enviar
+```
+
+`--reanudar` salta a quien ya recibió y vuelve a intentar los que fallaron.
+
+### Seguimiento de campañas
+
+```bash
+npm run cli -- campanas              # lista campañas: enviado · entregado · leído · fallido
+npm run cli -- reporte 1a2b3c4d      # CSV con radicado, teléfono, estado, wamid y fecha
+```
+
+Los estados se actualizan solos con el webhook. El reporte contiene teléfonos: no lo subas al repo (`*.csv` ya está en `.gitignore`).
+
 ### Webhook
 
 ```bash
