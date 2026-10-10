@@ -1,13 +1,13 @@
 # bowa · Estado, auditoría y próximos pasos
 
-_Corte: 27 de septiembre de 2026._
+_Corte: 10 de octubre de 2026. Para el detalle con evidencia, ver `docs/BITACORA.md`._
 
 ## 1. Resumen en 30 segundos
 
 - ✅ **bowa ya envía WhatsApp de verdad.** Llegó un `hello_world` al teléfono de Juan desde la CLI y desde GitHub Actions.
 - ✅ **El webhook responde:** `hola`, un número de radicado, `BAJA` y `ALTA`, por ahora con un túnel temporal desde el PC.
 - ✅ **El token es permanente** (usuario del sistema) y los secretos están fuera del repo.
-- ⏳ **Hay 7 PRs listos para aprobar (#3 a #9).** Se combinan sin conflictos: 52/52 pruebas.
+- ✅ **Todo el código está en `main`** (PRs #1 a #12): campañas seguras (fase 3) y bandeja cifrada (fase 4) incluidas. 64/64 pruebas.
 - 🚧 **Para envíos masivos reales faltan tres cosas:** un número propio (hoy se usa el de prueba, con máximo 5 destinatarios), la plantilla `aviso_radicado` aprobada y un servidor 24/7.
 
 ## 2. Qué hay construido
@@ -20,20 +20,22 @@ _Corte: 27 de septiembre de 2026._
 | Cifrado AES-256-GCM en reposo y firma de Meta verificada | ✅ en `main` | `src/crypto.js`, `src/store.js` |
 | Webhook: BAJA/ALTA, consulta de radicado, estados de entrega | ✅ en `main` | `src/server.js` |
 | Envío de prueba desde GitHub Actions | ✅ en `main` | `.github/workflows/enviar-prueba.yml` |
-| wamid visible en la salida | ⏳ PR #4 | `src/format.js` |
-| Pruebas y lint en Windows | ⏳ PRs #3 y #5 | `test/`, `scripts/lint.js` |
-| Acciones de CI en Node 24 | ⏳ PR #6 | `.github/workflows/` |
-| Guía del webhook con cloudflared y registro por API | ⏳ PR #7 | `README.md` |
-| Servidor 24/7 en Oracle Cloud gratis | ⏳ PR #8 | `deploy/` |
-| Fiabilidad para envíos masivos (auditoría) | ⏳ PR #9 | `src/store.js`, `src/server.js` |
+| wamid visible en la salida | ✅ en `main` (#4) | `src/format.js` |
+| Pruebas y lint en Windows | ✅ en `main` (#3, #5) | `test/`, `scripts/lint.js` |
+| Acciones de CI en Node 24 | ✅ en `main` (#6) | `.github/workflows/` |
+| Guía del webhook con cloudflared y registro por API | ✅ en `main` (#7) | `README.md` |
+| Servidor 24/7 en Oracle Cloud gratis | ✅ scripts en `main` (#8) · ❓ aún no instalado en una VM | `deploy/` |
+| Fiabilidad para envíos masivos (auditoría) | ✅ en `main` (#9) | `src/store.js`, `src/server.js` |
+| Campañas seguras: confirmación, `--reanudar`, `campanas`, `reporte` | ✅ en `main` (#11) | `src/cli.js`, `src/report.js` |
+| Bandeja cifrada: `bandeja` y `responder` (ventana de 24 h) | ✅ en `main` (#12) | `src/inbox.js`, `src/server.js` |
 
 **Configuración en Meta, hecha por el agente local:** app con usuario del sistema y token permanente, plantilla `aviso_radicado` creada (categoría Utilidad, en revisión), webhook suscrito al campo `messages`. El número emisor es el **número de prueba** de Meta.
 
 ## 3. Auditoría del repositorio
 
-Revisé todo el código con los PRs abiertos combinados. Los hallazgos graves ya tienen arreglo en el **PR #9**.
+Revisé todo el código. Los hallazgos graves se arreglaron en el **PR #9** (ya en `main`).
 
-### Arreglados en el PR #9
+### Arreglados (PR #9, en `main`)
 | Severidad | Hallazgo |
 |---|---|
 | 🔴 | La CLI y el servidor guardan el mismo almacén, y el último en guardar borraba las **BAJAS** y estados del otro. |
@@ -69,8 +71,8 @@ Revisé todo el código con los PRs abiertos combinados. Los hallazgos graves ya
 
 ## 4. Próximos pasos: envío masivo y mensajes individuales
 
-### Fase 0 · Aprobar lo que está listo (Juan, 10 min)
-Hacer merge de **#3 → #9 → docs**. Cualquier orden funciona; está comprobado que se combinan limpio.
+### Fase 0 · Aprobar lo que está listo ✅
+Hecho: los PRs #3 a #12 están en `main`.
 
 ### Fase 1 · Servidor 24/7 (Juan, ~40 min)
 1. Seguir `deploy/ORACLE.md`: VM gratis, dominio de DuckDNS e `install.sh`.

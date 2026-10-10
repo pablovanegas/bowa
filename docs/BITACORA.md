@@ -38,9 +38,9 @@ Registro de lo que **de verdad** se hizo, con su evidencia. Sirve para que cualq
 | 2026-09-27 | Despliegue 24/7 en Oracle (scripts y guía) | PR #8 → `a9ae808` | ✅ código; ❓ **aún no instalado en una VM real** |
 | 2026-09-27 | Auditoría: arreglos de fiabilidad (almacén compartido, BAJA, estados) | PR #9 → `7b10882` | ✅ 52 pruebas en `main` |
 | 2026-09-27 | Estado, auditoría y roadmap (`docs/ESTADO.md`) | PR #10 → `1e713f3` | ✅ |
-| 2026-09-27 | Fase 3: confirmación, `--reanudar`, `campanas` y `reporte` | PR #11 (`159c893`) | ⏳ abierto · ✅ 58 pruebas en la rama |
-| 2026-09-27 | Fase 4: bandeja cifrada, `bandeja` y `responder` | PR #12 (`1275da7`), apilado sobre el #11 | ⏳ abierto · ✅ 64 pruebas en la rama |
-| 2026-09-27 | Bitácora y protocolo anti-alucinación | PR #13, apilado sobre el #12 | ⏳ abierto |
+| 2026-09-27 | Fase 3: confirmación, `--reanudar`, `campanas` y `reporte` | PR #11 → `872dbd3` (fusionado el 2026-10-10) | ✅ 58 pruebas |
+| 2026-09-27 | Fase 4: bandeja cifrada, `bandeja` y `responder` | PR #12 → `6e8f890` (fusionado el 2026-10-10) | ✅ 64 pruebas en `main` |
+| 2026-10-10 | Bitácora, protocolo anti-alucinación y `ESTADO.md` al día | PR #13 | ✅ 64 pruebas · el hash se anota al empezar la próxima sesión |
 
 ## Errores y lecciones (para no repetirlos)
 | Qué pasó | Lección |
@@ -53,3 +53,5 @@ Registro de lo que **de verdad** se hizo, con su evidencia. Sirve para que cualq
 | La URL del túnel rápido de cloudflared cambia en cada arranque. | Para producción, usar la VM con dominio fijo (`deploy/ORACLE.md`). |
 | El primer token de Meta era temporal (dura 24 h) y no sirve entre sesiones. | Usar solo el token permanente de usuario del sistema. |
 | Copilot encontró el secreto de la app en una URL de ejemplo. | Los tokens van siempre en la cabecera `Authorization`, también en la documentación. |
+| Al fusionar con squash el #11, la rama apilada del #12 tuvo conflictos con `main` en las mismas líneas. | En PRs apilados: confirmar que `git diff <rama inferior> origin/main` sale vacío y entonces conservar la versión de la rama superior (`git checkout --ours`). Correr las pruebas y esperar el CI antes del siguiente merge. |
+| `docs/ESTADO.md` quedó diciendo "PRs por aprobar" cuando ya estaban fusionados. | Cada merge actualiza `ESTADO.md` y la bitácora en el mismo PR, o en el siguiente. |

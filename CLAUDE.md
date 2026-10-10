@@ -37,6 +37,11 @@ deploy/           VM Oracle: install.sh, update.sh, bowa.service, Caddyfile, ORA
 ## Flujo de trabajo
 - Una rama y un PR por tarea, hacia `main`. Toda función nueva lleva prueba en `test/`, y `npm test` y `npm run lint` deben estar en verde.
 - Copilot revisa cada PR: se atienden sus hallazgos, se responde en el hilo y se resuelve.
+- **PRs apilados** (uno construido sobre otro): se fusionan en orden. Después de cada merge:
+  1. cambiar la base del siguiente PR a `main`;
+  2. hacer merge de `main` en su rama: si `git diff <rama inferior> origin/main` sale vacío, los conflictos se resuelven con la versión de la rama superior;
+  3. correr `npm test` y esperar el CI en verde antes de fusionar.
+- **Después de fusionar:** actualizar `docs/BITACORA.md` (con el hash del merge) y `docs/ESTADO.md`. Si no puede ir en el mismo PR, va en el siguiente.
 - Hay dos agentes:
   - **En la nube:** tiene GitHub, pero no puede llegar a `graph.facebook.com`.
   - **Local, en el PC de Juan (Windows 11):** tiene Meta, el `.env` y el túnel.
