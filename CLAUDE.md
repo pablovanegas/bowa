@@ -9,7 +9,7 @@ Bot de envíos masivos e individuales por WhatsApp (Cloud API oficial de Meta), 
 ## Comandos
 - `npm test`: pruebas con `node:test` (sin dependencias).
 - `npm run lint`: `node --check` archivo por archivo (`scripts/lint.js`); funciona en Windows.
-- `npm run cli -- <keygen|radicado|validar|enviar|campana|campanas|reporte>`: ver `src/cli.js`. Sin `--enviar`, todo es simulación.
+- `npm run cli -- <keygen|radicado|validar|enviar|campana|campanas|reporte|bandeja|responder>`: ver `src/cli.js`. Sin `--enviar`, todo es simulación.
 - `npm start`: servidor del webhook (`/webhook`, `/health`).
 
 ## Mapa
@@ -17,7 +17,7 @@ Bot de envíos masivos e individuales por WhatsApp (Cloud API oficial de Meta), 
 src/cli.js        CLI (bin "bowa")            src/server.js   webhook: bajas, radicados, estados
 src/campaign.js   envío masivo con ritmo       src/store.js    almacén cifrado compartido (candado + fusión)
 src/whatsapp.js   cliente Graph API            src/format.js   líneas de salida (incluye wamid)
-src/report.js     reporte de campañas y CSV
+src/report.js     reporte de campañas y CSV   src/inbox.js    bandeja y ventana de 24 h
 src/contacts.js   CSV, E.164, consentimiento   src/radicado.js radicados con dígito de control
 src/crypto.js     AES-GCM, HMAC, firma Meta    src/config.js   variables de entorno
 deploy/           VM Oracle: install.sh, update.sh, bowa.service, Caddyfile, ORACLE.md
@@ -27,7 +27,7 @@ deploy/           VM Oracle: install.sh, update.sh, bowa.service, Caddyfile, ORA
 ## Reglas
 - Node 22+, ESM, **cero dependencias** en tiempo de ejecución salvo que sea imprescindible.
 - Todo dato personal que se persista pasa por `EncryptedStore`. Nunca en claro en disco ni en logs.
-- El almacén lo comparten la CLI y el servidor. Hay que usar sus métodos (`recordRadicado`, `updateMessageStatus`, `setOptOut`) y `save()`, **nunca** escribir el archivo a mano. Cada `save()` fusiona con el disco bajo un candado.
+- El almacén lo comparten la CLI y el servidor. Hay que usar sus métodos (`recordRadicado`, `updateMessageStatus`, `setOptOut`, `recordChat`) y `save()`, **nunca** escribir el archivo a mano. Cada `save()` fusiona con el disco bajo un candado.
 - Los envíos masivos solo van con plantillas aprobadas y a contactos con `opt_in`. `BAJA` siempre se respeta y se guarda **antes** de responder.
 - No usar librerías no oficiales de WhatsApp Web (whatsapp-web.js, Baileys): arriesgan el bloqueo del número.
 - Formato de radicado: `PREFIJO-AAAAMMDD-XXXXXX-C` (Crockford base32 + control Luhn mod 32). No cambiarlo sin migración.

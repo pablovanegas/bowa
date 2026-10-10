@@ -92,6 +92,10 @@ export async function processWebhook(payload, { store, client }) {
         store.updateMessageStatus(st.id, STATUS_ES[st.status] ?? st.status, at);
       }
       for (const msg of value.messages ?? []) {
+        // Todo lo que llega queda en la bandeja (cifrado); fotos, audios, etc. como [tipo].
+        const at = msg.timestamp ? new Date(Number(msg.timestamp) * 1000).toISOString() : undefined;
+        const body = msg.type === 'text' ? msg.text?.body ?? '' : `[${msg.type}]`;
+        store.recordChat({ id: msg.id, phone: msg.from, dir: 'in', body, at });
         if (msg.type !== 'text') continue;
         replies.push({ to: msg.from, id: msg.id, body: replyFor(msg.text?.body, msg.from, store) });
       }
@@ -99,14 +103,18 @@ export async function processWebhook(payload, { store, client }) {
   }
   await store.save();
 
+  let sent = 0;
   for (const r of replies) {
     try {
       await client.markRead(r.id).catch(() => {});
-      await client.sendText(r.to, r.body);
+      const { id } = await client.sendText(r.to, r.body);
+      store.recordChat({ id, phone: r.to, dir: 'out', body: r.body, auto: true });
+      sent++;
     } catch (err) {
       console.error('[bowa] no se pudo responder un mensaje:', err.message);
     }
   }
+  if (sent) await store.save();
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
